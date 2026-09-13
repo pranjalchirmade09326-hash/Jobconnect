@@ -3,7 +3,4 @@ node_modules/
 dist/
 .DS_Store
 npm-debug.log*
-readmepranjal.me
-docs
-API_DOCUMENTATION.md
-
+readmepranjal.md

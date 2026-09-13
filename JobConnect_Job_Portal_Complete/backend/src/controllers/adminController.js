@@ -1,15 +1,28 @@
-const { User, Job, Application, sequelize } = require('../models');
+const { pool } = require('../config/db');
 
 async function dashboard(req, res, next) {
   try {
-    const [users, jobs, applications, employers, seekers] = await Promise.all([
-      User.count(),
-      Job.count(),
-      Application.count(),
-      User.count({ where: { role: 'employer' } }),
-      User.count({ where: { role: 'job_seeker' } })
+    const [
+      [uRows],
+      [jRows],
+      [aRows],
+      [empRows],
+      [seekRows]
+    ] = await Promise.all([
+      pool.query('SELECT COUNT(*) AS count FROM users'),
+      pool.query('SELECT COUNT(*) AS count FROM jobs'),
+      pool.query('SELECT COUNT(*) AS count FROM applications'),
+      pool.query("SELECT COUNT(*) AS count FROM users WHERE role = 'employer'"),
+      pool.query("SELECT COUNT(*) AS count FROM users WHERE role = 'job_seeker'")
     ]);
-    res.json({ users, jobs, applications, employers, seekers });
+
+    res.json({
+      users: uRows[0].count,
+      jobs: jRows[0].count,
+      applications: aRows[0].count,
+      employers: empRows[0].count,
+      seekers: seekRows[0].count
+    });
   } catch (err) {
     next(err);
   }
@@ -17,10 +30,9 @@ async function dashboard(req, res, next) {
 
 async function users(req, res, next) {
   try {
-    const rows = await User.findAll({
-      attributes: { exclude: ['password'] },
-      order: [['createdAt', 'DESC']]
-    });
+    const [rows] = await pool.query(
+      'SELECT id, name, email, role, phone, skills, companyName, createdAt, updatedAt FROM users ORDER BY createdAt DESC'
+    );
     res.json(rows);
   } catch (err) {
     next(err);
@@ -28,33 +40,44 @@ async function users(req, res, next) {
 }
 
 async function deleteUser(req, res, next) {
-  const transaction = await sequelize.transaction();
+  const connection = await pool.getConnection();
   try {
-    const user = await User.findByPk(req.params.id, { transaction });
+    await connection.beginTransaction();
+
+    const [uRows] = await connection.query('SELECT * FROM users WHERE id = ?', [req.params.id]);
+    const user = uRows[0];
+
     if (!user) {
-      await transaction.rollback();
+      await connection.rollback();
       return res.status(404).json({ message: 'User not found' });
     }
+
     if (user.id === req.user.id) {
-      await transaction.rollback();
+      await connection.rollback();
       return res.status(400).json({ message: 'Admin cannot delete the current account' });
     }
 
-    const jobs = await Job.findAll({ where: { employerId: user.id }, transaction });
-    const jobIds = jobs.map(j => j.id);
-
-    if (jobIds.length) {
-      await Application.destroy({ where: { jobId: jobIds }, transaction });
-      await Job.destroy({ where: { id: jobIds }, transaction });
+    // Find and delete any jobs and related applications if user is employer
+    const [jobs] = await connection.query('SELECT id FROM jobs WHERE employerId = ?', [user.id]);
+    if (jobs.length > 0) {
+      const jobIds = jobs.map(j => j.id);
+      await connection.query('DELETE FROM applications WHERE jobId IN (?)', [jobIds]);
+      await connection.query('DELETE FROM jobs WHERE id IN (?)', [jobIds]);
     }
-    await Application.destroy({ where: { seekerId: user.id }, transaction });
-    await user.destroy({ transaction });
 
-    await transaction.commit();
+    // Delete any applications made as a seeker
+    await connection.query('DELETE FROM applications WHERE seekerId = ?', [user.id]);
+
+    // Delete user
+    await connection.query('DELETE FROM users WHERE id = ?', [user.id]);
+
+    await connection.commit();
     res.json({ message: 'User and related records deleted successfully' });
   } catch (err) {
-    await transaction.rollback();
+    await connection.rollback();
     next(err);
+  } finally {
+    connection.release();
   }
 }
 
