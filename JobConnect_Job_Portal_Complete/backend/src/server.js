@@ -39,6 +39,16 @@ app.get("/", (req, res) => {
 const apiRoutes = require("./routes/routes");
 app.use("/api", apiRoutes);
 
+// =======================
+// Error Handling Middleware
+// =======================
+app.use((err, req, res, next) => {
+  console.error("Server Error:", err);
+  res.status(err.status || 500).json({
+    message: err.message || "Internal Server Error"
+  });
+});
+
 
 // =======================
 // PORT
