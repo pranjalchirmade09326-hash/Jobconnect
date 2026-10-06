@@ -9,8 +9,8 @@ const app = express();
 app.use(
   cors({
     origin: [
-      "http://localhost:5173",
-      "https://your-frontend.vercel.app"
+      "http://localhost:5173"
+      // Later add your Vercel frontend URL here
     ],
     credentials: true
   })
@@ -26,14 +26,21 @@ app.get("/", (req, res) => {
   });
 });
 
-// Your API routes
-// Example:
-// const authRoutes = require("./routes/authRoutes");
-// app.use("/api/auth", authRoutes);
+/*
+  KEEP YOUR EXISTING ROUTES HERE.
 
-// const jobRoutes = require("./routes/jobRoutes");
-// app.use("/api/jobs", jobRoutes);
+  For example, if you already have:
 
+  const authRoutes = require("./routes/authRoutes");
+  const jobRoutes = require("./routes/jobRoutes");
+
+  then keep them and use:
+
+  app.use("/api/auth", authRoutes);
+  app.use("/api/jobs", jobRoutes);
+*/
+
+// PORT
 const PORT = process.env.PORT || 5000;
 
 app.listen(PORT, "0.0.0.0", () => {
