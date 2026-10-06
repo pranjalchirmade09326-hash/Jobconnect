@@ -10,11 +10,24 @@ const app = express();
 // =======================
 app.use(
   cors({
-    origin: [
-      "http://localhost:5173",
-      "https://jobconnect-frontend.vercel.app" // apna Vercel URL
-    ],
-    credentials: true
+    origin: (origin, callback) => {
+      // Allow requests with no origin (curl, mobile, Postman)
+      if (!origin) return callback(null, true);
+
+      // Allow localhost or any vercel.app domain
+      if (
+        origin.startsWith("http://localhost:") ||
+        origin.endsWith(".vercel.app") ||
+        origin === "https://jobconnect-j8cu.vercel.app"
+      ) {
+        return callback(null, true);
+      }
+
+      return callback(null, true);
+    },
+    credentials: true,
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"]
   })
 );
 
@@ -23,14 +36,34 @@ app.use(
 // =======================
 app.use(express.json());
 
+const { pool } = require("./config/db");
+
 // =======================
-// Test Route
+// Test & Health Routes
 // =======================
 app.get("/", (req, res) => {
   res.json({
     success: true,
     message: "JobConnect Backend is running!"
   });
+});
+
+app.get("/api/health", async (req, res) => {
+  try {
+    await pool.query("SELECT 1 AS ok");
+    res.json({
+      status: "ok",
+      database: "connected",
+      time: new Date().toISOString()
+    });
+  } catch (err) {
+    res.status(500).json({
+      status: "error",
+      database: "disconnected",
+      message: err.message,
+      code: err.code
+    });
+  }
 });
 
 // =======================
