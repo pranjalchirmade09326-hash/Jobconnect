@@ -2,16 +2,17 @@ require("dotenv").config();
 
 const express = require("express");
 const cors = require("cors");
+const { pool } = require("./config/db");
 
 const app = express();
 
 // =======================
-// CORS
+// CORS Configuration
 // =======================
 app.use(
   cors({
     origin: (origin, callback) => {
-      // Allow requests with no origin (curl, mobile, Postman)
+      // Allow requests with no origin (like mobile apps, curl, etc.)
       if (!origin) return callback(null, true);
 
       // Allow localhost or any vercel.app domain
@@ -35,8 +36,6 @@ app.use(
 // Middleware
 // =======================
 app.use(express.json());
-
-const { pool } = require("./config/db");
 
 // =======================
 // Test & Health Routes
@@ -81,7 +80,6 @@ app.use((err, req, res, next) => {
     message: err.message || "Internal Server Error"
   });
 });
-
 
 // =======================
 // PORT
