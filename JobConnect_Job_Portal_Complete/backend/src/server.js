@@ -5,20 +5,27 @@ const cors = require("cors");
 
 const app = express();
 
+// =======================
 // CORS
+// =======================
 app.use(
   cors({
     origin: [
-      "http://localhost:5173"
-      // Later add your Vercel frontend URL here
+      "http://localhost:5173",
+      "https://jobconnect-frontend.vercel.app" // apna Vercel URL
     ],
     credentials: true
   })
 );
 
+// =======================
+// Middleware
+// =======================
 app.use(express.json());
 
-// Test route
+// =======================
+// Test Route
+// =======================
 app.get("/", (req, res) => {
   res.json({
     success: true,
@@ -26,23 +33,18 @@ app.get("/", (req, res) => {
   });
 });
 
-/*
-  KEEP YOUR EXISTING ROUTES HERE.
+// =======================
+// API Routes
+// =======================
+const apiRoutes = require("./routes/routes");
+app.use("/api", apiRoutes);
 
-  For example, if you already have:
 
-  const authRoutes = require("./routes/authRoutes");
-  const jobRoutes = require("./routes/jobRoutes");
-
-  then keep them and use:
-
-  app.use("/api/auth", authRoutes);
-  app.use("/api/jobs", jobRoutes);
-*/
-
+// =======================
 // PORT
+// =======================
 const PORT = process.env.PORT || 5000;
 
 app.listen(PORT, "0.0.0.0", () => {
-  console.log(`Server running on port ${PORT}`);
+  console.log(`JobConnect Backend running on port ${PORT}`);
 });
